@@ -59,11 +59,13 @@ func UpdateTXTRecord(id, txtRecord, subdomain string, credz Credentials) error {
 	type UpdatePutParams struct {
 		SubDomain string `json:"subDomain"`
 		Target    string `json:"target"`
+		TTL       int    `json:"ttl"`
 	}
 
 	params := &UpdatePutParams{
 		SubDomain: subdomain,
 		Target:    "\"" + txtRecord + "\"",
+		TTL:       120,
 	}
 	uri := fmt.Sprintf("/domain/zone/%s/record/%s", os.Getenv("BASE_DOMAIN"), id)
 	if err := client.Put(uri, params, nil); err != nil {
