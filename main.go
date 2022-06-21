@@ -4,8 +4,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/govirtuo/cf2ovh/cloudflare"
-	"github.com/govirtuo/cf2ovh/ovh"
+	"github.com/govirtuo/cfcr/cloudflare"
+	"github.com/govirtuo/cfcr/ovh"
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 )

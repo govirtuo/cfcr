@@ -1,4 +1,4 @@
-module github.com/govirtuo/cf2ovh
+module github.com/govirtuo/cfcr
 
 go 1.18
 
