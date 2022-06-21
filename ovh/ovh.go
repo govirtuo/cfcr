@@ -64,7 +64,7 @@ func UpdateTXTRecord(id, txtRecord, subdomain string, credz Credentials) error {
 
 	params := &UpdatePutParams{
 		SubDomain: subdomain,
-		Target:    "\"" + txtRecord + "\"",
+		Target:    txtRecord,
 		TTL:       120,
 	}
 	uri := fmt.Sprintf("/domain/zone/%s/record/%s", os.Getenv("BASE_DOMAIN"), id)
