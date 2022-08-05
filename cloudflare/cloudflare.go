@@ -97,26 +97,3 @@ func GetTXTValues(id string, credz Credentials) ([]ValidationRecords, error) {
 
 	return holder.Result[0].ValidationRecords, nil
 }
-
-func RetriggerSSLVerification(id string, credz Credentials) error {
-	url := fmt.Sprintf("https://api.cloudflare.com/client/v4/zones/%s/ssl/verification?retry=true", id)
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return err
-	}
-
-	req.Header = http.Header{
-		"X-Auth-Email": {credz.AuthEmail},
-		"X-Auth-Key":   {credz.AuthKey},
-		"Content-Type": {"application/json"},
-	}
-
-	client := &http.Client{}
-	r, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer r.Body.Close()
-
-	return nil
-}
