@@ -1,31 +1,26 @@
-# **C**loud**f**lare **C**erts **R**enewal
+# **C**loud**f**lare **C**erts **R**enewer
 
-## Setup
-
-Create a `.env` file containing the following variables:
-
-```
-BASE_DOMAIN=...
-
-CLOUDFLARE_AUTH_EMAIL=...
-CLOUDFLARE_AUTH_KEY=...
-
-OVH_APPLICATION_KEY=...
-OVH_APPLICATION_SECRET=...
-OVH_CONSUMER_KEY=...
-```
+`cfcr` is an utility that updates OVH TXT records when needed in order for Cloudflare Advanced Edge Certificates to be renewed. When using Let's Encrypt provider, this operation must be done manually every 3 months, which end up being time-consuming.
 
 ## Usage
 
-```
-$ cfcr <domain>
-```
-
-Example:
+The CLI usage of `cfcr` is really simple, as everything is configured using a YAML file ([see](#config)):
 
 ```
-$ cfcr api.govirtuo.com
+Usage of cfcr:
+  -config string
+        configuration file name (default "config.yaml")
 ```
+## Config
+
+Most of `cfcr` configuration is done using a YAML config file. A sample is provided [here](https://github.com/govirtuo/cfcr/blob/main/config.sample.yaml).
+
+## Metrics
+
+`cfcr` is shipped with an embedded Prometheus exporter that exposes basic metrics about the program behavior (stack/heap allocations...) and some others about certs renewal, especially:
+
+* `cfcr_domains_watched_total`: the number of domains `cfcr` is watching;
+* `cfcr_last_updated_timestamp`: when was a given domain last updated by `cfcr`. There is one version of this metric for each watched domain.
 
 ## License
 
