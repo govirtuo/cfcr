@@ -1,3 +1,4 @@
+# BUILD stage
 FROM devopsworks/golang-upx:1.18 as BUILDER
 
 ENV GO111MODULE=on \
@@ -13,6 +14,7 @@ RUN go mod download
 RUN make build && \
     /usr/local/bin/upx -9 ./out/bin/cfcr
 
+# RUN stage
 FROM gcr.io/distroless/base-debian11
 
 WORKDIR /app
