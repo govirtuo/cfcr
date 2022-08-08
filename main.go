@@ -143,7 +143,9 @@ func main() {
 					// 	subl.Error().Err(err).Msg("cannot update TXT record")
 					// }
 				}
-				s.SetDomainLastUpdatedMetric(d)
+				if c.Metrics.Enabled {
+					s.SetDomainLastUpdatedMetric(d)
+				}
 				subl.Info().Msg("update completed")
 			}
 		}
