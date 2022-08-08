@@ -25,7 +25,14 @@ type Config struct {
 		BaseDomain string   `yaml:"base_domain"`
 		Frequency  string   `yaml:"frequency"`
 		Domains    []string `yaml:"domains"`
-	}
+	} `yaml:"checks"`
+	Metrics struct {
+		Enabled bool `yaml:"enabled"`
+		Server  struct {
+			Address string `yaml:"address"`
+			Port    string `yaml:"port"`
+		} `yaml:"server"`
+	} `yaml:"metrics"`
 }
 
 var validFrequencies = [5]string{

@@ -13,6 +13,7 @@ import (
 	"github.com/govirtuo/cfcr/app"
 	"github.com/govirtuo/cfcr/cloudflare"
 	"github.com/govirtuo/cfcr/config"
+	"github.com/govirtuo/cfcr/metrics"
 	"github.com/govirtuo/cfcr/ovh"
 	"github.com/rs/zerolog/log"
 )
@@ -36,7 +37,6 @@ func main() {
 	if err != nil {
 		a.Logger.Fatal().Err(err).Msgf("cannot parse config file %s", configFile)
 	}
-
 	if err := c.Validate(); err != nil {
 		a.Logger.Fatal().Err(err).Msg("configuration is not valid")
 	}
@@ -44,8 +44,16 @@ func main() {
 	a.Logger.Info().Msgf("%s version %s (built: %s)", os.Args[0], Version, BuildDate)
 	a.Logger.Info().Msgf("config creation successful, found %d domains", len(c.Checks.Domains))
 	a.Logger.Debug().Msgf("%s", c.Checks.Domains)
-
 	a.Logger.Info().Msgf("checks frequency is set to '%s'", c.Checks.Frequency)
+
+	// start metrics server if asked
+	var s *metrics.Server
+	if c.Metrics.Enabled {
+		s = metrics.Init(c.Metrics.Server.Address, c.Metrics.Server.Port)
+		a.Logger.Info().Msgf("starting metrics server on address '%s'", s.Addr)
+		go s.Start()
+		s.SetNumOfDomainsMetric(len(c.Checks.Domains))
+	}
 
 	var ticker time.Ticker
 	switch c.Checks.Frequency {
@@ -135,6 +143,7 @@ func main() {
 					// 	subl.Error().Err(err).Msg("cannot update TXT record")
 					// }
 				}
+				s.SetDomainLastUpdatedMetric(d)
 				subl.Info().Msg("update completed")
 			}
 		}
