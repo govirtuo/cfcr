@@ -17,6 +17,11 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+var (
+	Version   string
+	BuildDate string
+)
+
 func main() {
 	a, err := app.Create()
 	if err != nil {
@@ -32,18 +37,15 @@ func main() {
 		a.Logger.Fatal().Err(err).Msgf("cannot parse config file %s", configFile)
 	}
 
-	// check config, look for typos in freq etc...
-	// TODO
 	if err := c.Validate(); err != nil {
 		a.Logger.Fatal().Err(err).Msg("configuration is not valid")
 	}
 
+	a.Logger.Info().Msgf("%s version %s (built: %s)", os.Args[0], Version, BuildDate)
 	a.Logger.Info().Msgf("config creation successful, found %d domains", len(c.Checks.Domains))
 	a.Logger.Debug().Msgf("%s", c.Checks.Domains)
 
 	a.Logger.Info().Msgf("checks frequecy is set on %s", c.Checks.Frequency)
-
-	// TODO: create the k8s client
 
 	var ticker time.Ticker
 	switch c.Checks.Frequency {
@@ -73,7 +75,6 @@ func main() {
 			os.Exit(1)
 		case t := <-ticker.C:
 			a.Logger.Debug().Msgf("received ticker signal at %s", t)
-
 			ccf := cloudflare.Credentials{
 				AuthEmail: c.Auth.Cloudflare.Email,
 				AuthKey:   c.Auth.Cloudflare.Key,
@@ -87,17 +88,19 @@ func main() {
 
 			a.Logger.Info().Msg("starting looping around listed domains")
 			for _, d := range c.Checks.Domains {
-				a.Logger.Info().Str("domain", d).Msg("getting zone ID on Cloudflare API")
-				id, err := cloudflare.GetZoneID(d, ccf)
+				subl := a.Logger.With().Str("domain", d).Logger()
+
+				subl.Info().Msg("getting zone ID on Cloudflare API")
+				id, err := cloudflare.GetZoneID(subl, d, ccf)
 				if err != nil {
-					a.Logger.Error().Err(err).Str("domain", d).Msg("cannot get zone ID")
+					subl.Error().Err(err).Msg("cannot get zone ID")
 					continue
 				}
 
-				a.Logger.Info().Str("domain", d).Msg("getting new TXT records on Cloudflare API")
+				subl.Info().Msg("getting new TXT records on Cloudflare API")
 				vals, err := cloudflare.GetTXTValues(id, ccf)
 				if err != nil {
-					a.Logger.Error().Err(err).Str("domain", d).Msg("cannot get new TXT records")
+					subl.Error().Err(err).Msg("cannot get new TXT records")
 					continue
 				}
 
@@ -106,22 +109,22 @@ func main() {
 					subdomain = strings.TrimSuffix("_acme-challenge."+d, "."+c.Checks.BaseDomain)
 				}
 
-				a.Logger.Info().Str("domain", d).Msgf("getting IDs for %s records on OVH API", subdomain)
+				subl.Info().Msgf("getting IDs for %s records on OVH API", subdomain)
 				ids, err := ovh.GetDomainIDs(subdomain, covh)
 				if err != nil {
-					a.Logger.Error().Err(err).Str("domain", d).Msg("cannot get IDs")
+					subl.Error().Err(err).Msg("cannot get IDs")
 					continue
 				}
 
 				// TODO: do not update directly! we should compare the TXT records grabbed on Cloudflare
 				// and the one that are present on OVH
 				for i, v := range vals {
-					a.Logger.Info().Str("domain", d).Msgf("updating %s (ID: %s) with value %s", subdomain, ids[i], v.TxtValue)
+					subl.Info().Msgf("updating %s (ID: %s) with value %s", subdomain, ids[i], v.TxtValue)
 					// if err := ovh.UpdateTXTRecord(ids[i], v.TxtValue, subdomain, covh); err != nil {
-					// 	a.Logger.Error().Err(err).Str("domain", d).Msg("cannot update TXT record")
+					// 	subl.Error().Err(err).Msg("cannot update TXT record")
 					// }
 				}
-				a.Logger.Info().Str("domain", d).Msg("update completed")
+				subl.Info().Msg("update completed")
 			}
 		}
 	}

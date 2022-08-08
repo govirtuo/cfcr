@@ -1,4 +1,5 @@
 ---
+log_level: debug
 auth:
   cloudflare:
     email: foo@bar.com

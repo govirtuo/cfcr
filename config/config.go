@@ -1,13 +1,16 @@
 package config
 
 import (
+	"fmt"
 	"os"
 
+	"github.com/rs/zerolog"
 	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
-	Auth struct {
+	LogLevel string `yaml:"log_level"`
+	Auth     struct {
 		Cloudflare struct {
 			Email string `yaml:"email"`
 			Key   string `yaml:"key"`
@@ -25,6 +28,14 @@ type Config struct {
 	}
 }
 
+var validFrequencies = [5]string{
+	"debug",
+	"hourly",
+	"daily",
+	"weekly",
+	"monthly",
+}
+
 func ParseConfig(file string) (*Config, error) {
 	data, err := os.ReadFile(file)
 	if err != nil {
@@ -39,7 +50,26 @@ func ParseConfig(file string) (*Config, error) {
 	return &c, nil
 }
 
-// TODO
 func (c Config) Validate() error {
+	// parse and set the log level
+	l, err := zerolog.ParseLevel(c.LogLevel)
+	if err != nil {
+		return err
+	}
+	zerolog.SetGlobalLevel(l)
+
+	// parse and validate given frequency
+	if !isFreqValid(c.Checks.Frequency) {
+		return fmt.Errorf("frequency %s is not a valid one", c.Checks.Frequency)
+	}
 	return nil
+}
+
+func isFreqValid(f string) bool {
+	for _, ff := range validFrequencies {
+		if f == ff {
+			return true
+		}
+	}
+	return false
 }
