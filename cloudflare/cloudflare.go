@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-
-	"github.com/rs/zerolog"
 )
 
 type Credentials struct {
@@ -21,7 +19,7 @@ type ValidationRecords struct {
 }
 
 // GetZoneID takes a zone name and returns the associated zone ID
-func GetZoneID(l zerolog.Logger, name string, credz Credentials) (string, error) {
+func GetZoneID(name string, credz Credentials) (string, error) {
 	type APISchema struct {
 		Result []struct {
 			ID string `json:"id"`

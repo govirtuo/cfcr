@@ -45,7 +45,7 @@ func main() {
 	a.Logger.Info().Msgf("config creation successful, found %d domains", len(c.Checks.Domains))
 	a.Logger.Debug().Msgf("%s", c.Checks.Domains)
 
-	a.Logger.Info().Msgf("checks frequecy is set on %s", c.Checks.Frequency)
+	a.Logger.Info().Msgf("checks frequency is set to '%s'", c.Checks.Frequency)
 
 	var ticker time.Ticker
 	switch c.Checks.Frequency {
@@ -91,16 +91,26 @@ func main() {
 				subl := a.Logger.With().Str("domain", d).Logger()
 
 				subl.Info().Msg("getting zone ID on Cloudflare API")
-				id, err := cloudflare.GetZoneID(subl, d, ccf)
+				id, err := cloudflare.GetZoneID(d, ccf)
 				if err != nil {
 					subl.Error().Err(err).Msg("cannot get zone ID")
 					continue
 				}
+				subl.Debug().Msgf("got zone ID from Cloudflare: %s", id)
 
 				subl.Info().Msg("getting new TXT records on Cloudflare API")
 				vals, err := cloudflare.GetTXTValues(id, ccf)
 				if err != nil {
 					subl.Error().Err(err).Msg("cannot get new TXT records")
+					continue
+				}
+				subl.Debug().Msgf("got TXT records from Cloudflare: %s", vals)
+
+				// Cloudflare does not return TXT records if a zone does not need
+				// a new certificate, so we can continue the loop from here if
+				// the condition is matched
+				if len(vals) == 0 {
+					subl.Info().Msg("Cloudflare did not return any TXT record to use, so this zone probably do not need a certificate renewal. Skipping the next steps...")
 					continue
 				}
 
@@ -115,6 +125,7 @@ func main() {
 					subl.Error().Err(err).Msg("cannot get IDs")
 					continue
 				}
+				subl.Debug().Msgf("got domain IDs from OVH: %s", ids)
 
 				// TODO: do not update directly! we should compare the TXT records grabbed on Cloudflare
 				// and the one that are present on OVH
