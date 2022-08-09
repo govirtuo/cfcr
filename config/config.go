@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -64,6 +65,13 @@ func (c Config) Validate() error {
 		return err
 	}
 	zerolog.SetGlobalLevel(l)
+
+	if c.Auth.Cloudflare.Email == "" {
+		return errors.New("cloudflare configuration is incomplete: missing .auth.cloudflare.email field")
+	}
+	if c.Auth.Cloudflare.Key == "" {
+		return errors.New("cloudflare configuration is incomplete: missing .auth.cloudflare.key field")
+	}
 
 	// parse and validate given frequency
 	if !isFreqValid(c.Checks.Frequency) {

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -14,7 +13,8 @@ import (
 	"github.com/govirtuo/cfcr/cloudflare"
 	"github.com/govirtuo/cfcr/config"
 	"github.com/govirtuo/cfcr/metrics"
-	"github.com/govirtuo/cfcr/ovh"
+	"github.com/govirtuo/cfcr/providers"
+	"github.com/govirtuo/cfcr/providers/ovh"
 	"github.com/rs/zerolog/log"
 )
 
@@ -72,28 +72,45 @@ func main() {
 		a.Logger.Fatal().Err(errors.New(err)).Msg("cannot create ticker")
 	}
 
+	// detect the correct provider based on the configuration
+	var pr providers.Provider
+	switch providers.ProviderToUse(*c) {
+	case providers.List[providers.OVH]:
+		a.Logger.Info().Msg("the detected provider is OVH")
+		subdomain := "_acme-challenge"
+		covh := ovh.Credentials{
+			ApplicationKey:    c.Auth.OVH.AppKey,
+			ApplicationSecret: c.Auth.OVH.AppSecret,
+			ConsumerKey:       c.Auth.OVH.ConsumerKey,
+		}
+		pr = ovh.OVHProvider{
+			Credentials: covh,
+			BaseDomain:  c.Checks.BaseDomain,
+			Subdomain:   subdomain,
+		}
+	case providers.List[providers.NONE]:
+		a.Logger.Fatal().Err(errors.New("no provider detected")).
+			Msg("no provider detected based on the configuration. Are you sure you completed all the required fields?")
+	}
+
+	ccf := cloudflare.Credentials{
+		AuthEmail: c.Auth.Cloudflare.Email,
+		AuthKey:   c.Auth.Cloudflare.Key,
+	}
+
 	// wait and loop
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	for {
 		select {
 		// having this pattern allows us to not interrupt the routine execution
+		// with an interrupt signal
+		// ? is it a good idea? maybe a more granular protection could be better
 		case sig := <-sigs:
 			a.Logger.Warn().Msgf("received signal %s, exiting", sig.String())
 			os.Exit(1)
 		case t := <-ticker.C:
 			a.Logger.Debug().Msgf("received ticker signal at %s", t)
-			ccf := cloudflare.Credentials{
-				AuthEmail: c.Auth.Cloudflare.Email,
-				AuthKey:   c.Auth.Cloudflare.Key,
-			}
-
-			covh := ovh.Credentials{
-				ApplicationKey:    c.Auth.OVH.AppKey,
-				ApplicationSecret: c.Auth.OVH.AppSecret,
-				ConsumerKey:       c.Auth.OVH.ConsumerKey,
-			}
-
 			a.Logger.Info().Msg("starting looping around listed domains")
 			for _, d := range c.Checks.Domains {
 				subl := a.Logger.With().Str("domain", d).Logger()
@@ -122,31 +139,21 @@ func main() {
 					continue
 				}
 
-				subdomain := "_acme-challenge"
-				if d != c.Checks.BaseDomain {
-					subdomain = strings.TrimSuffix("_acme-challenge."+d, "."+c.Checks.BaseDomain)
+				var txtvalues []string
+				for _, v := range vals {
+					txtvalues = append(txtvalues, v.TxtValue)
+				}
+				if !true { // ! debug
+					if err := pr.UpdateTXTRecords(subl, d, txtvalues...); err != nil {
+						a.Logger.Error().Err(err).Msg("failed to update TXT records")
+					}
 				}
 
-				subl.Info().Msgf("getting IDs for %s records on OVH API", subdomain)
-				ids, err := ovh.GetDomainIDs(subdomain, covh)
-				if err != nil {
-					subl.Error().Err(err).Msg("cannot get IDs")
-					continue
-				}
-				subl.Debug().Msgf("got domain IDs from OVH: %s", ids)
-
-				// TODO: do not update directly! we should compare the TXT records grabbed on Cloudflare
-				// and the one that are present on OVH
-				for i, v := range vals {
-					subl.Info().Msgf("updating %s (ID: %s) with value %s", subdomain, ids[i], v.TxtValue)
-					// if err := ovh.UpdateTXTRecord(ids[i], v.TxtValue, subdomain, covh); err != nil {
-					// 	subl.Error().Err(err).Msg("cannot update TXT record")
-					// }
-				}
 				if c.Metrics.Enabled {
+					subl.Debug().Msg("updating timestamp in last updated metric")
 					s.SetDomainLastUpdatedMetric(d)
 				}
-				subl.Info().Msg("update completed")
+				subl.Info().Msg("domain records update completed")
 			}
 		}
 	}
