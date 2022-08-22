@@ -24,7 +24,7 @@ type Credentials struct {
 	ConsumerKey       string
 }
 
-func getDomainIDs(basedomain, subdomain string, credz Credentials) ([]string, error) {
+func getDomainIDs(l zerolog.Logger, basedomain, subdomain string, credz Credentials) ([]string, error) {
 	type APISchema []int
 
 	client, err := ovh.NewClient(
@@ -39,6 +39,7 @@ func getDomainIDs(basedomain, subdomain string, credz Credentials) ([]string, er
 
 	var a APISchema
 	uri := fmt.Sprintf("/domain/zone/%s/record?subDomain=%s", basedomain, subdomain)
+	l.Debug().Msgf("sending GET on %s", uri)
 	if err := client.Get(uri, &a); err != nil {
 		return []string{}, err
 	}
@@ -57,7 +58,7 @@ func getDomainIDs(basedomain, subdomain string, credz Credentials) ([]string, er
 func (p OVHProvider) UpdateTXTRecords(l zerolog.Logger, domain string, txtvalues ...string) error {
 	subdomain := getCorrectSubdomain(domain, p.BaseDomain)
 	l.Info().Msgf("getting IDs for %s TXT records on OVH API", subdomain)
-	ids, err := getDomainIDs(p.BaseDomain, subdomain, p.Credentials)
+	ids, err := getDomainIDs(l, p.BaseDomain, subdomain, p.Credentials)
 	if err != nil {
 		return err
 	}
@@ -89,7 +90,7 @@ func (p OVHProvider) UpdateTXTRecords(l zerolog.Logger, domain string, txtvalues
 
 	// this block covers the cases 1) and 2)
 	if len(txtvalues) <= len(ids) {
-		l.Debug().Msg("less TXT values than IDs, no need to create new DNS records")
+		l.Debug().Msg("less or same number of TXT values than IDs, no need to create new DNS records")
 		for i, txtvalue := range txtvalues {
 			params := &UpdatePutParams{
 				SubDomain: subdomain,
@@ -97,7 +98,7 @@ func (p OVHProvider) UpdateTXTRecords(l zerolog.Logger, domain string, txtvalues
 				TTL:       120,
 			}
 			uri := fmt.Sprintf("/domain/zone/%s/record/%s", p.BaseDomain, ids[i])
-			l.Debug().Msgf("sending PUT on %s with params %s", uri, params)
+			l.Debug().Msgf("sending PUT on %s with params %v", uri, params)
 			if err := client.Put(uri, params, nil); err != nil {
 				return err
 			}
@@ -124,7 +125,7 @@ func (p OVHProvider) UpdateTXTRecords(l zerolog.Logger, domain string, txtvalues
 				TTL:       120,
 			}
 			uri := fmt.Sprintf("/domain/zone/%s/record", p.BaseDomain)
-			l.Debug().Msgf("sending POST on %s with params %s", uri, params)
+			l.Debug().Msgf("sending POST on %s with params %v", uri, params)
 			if err := client.Post(uri, params, nil); err != nil {
 				return err
 			}
@@ -139,7 +140,7 @@ func (p OVHProvider) UpdateTXTRecords(l zerolog.Logger, domain string, txtvalues
 				TTL:       120,
 			}
 			uri := fmt.Sprintf("/domain/zone/%s/record/%s", p.BaseDomain, ids[i])
-			l.Debug().Msgf("sending PUT on %s with params %s", uri, params)
+			l.Debug().Msgf("sending PUT on %s with params %v", uri, params)
 			if err := client.Put(uri, params, nil); err != nil {
 				return err
 			}
@@ -157,7 +158,7 @@ func getCorrectSubdomain(d, bd string) string {
 	// tests in ovh_test.go serves as a proof
 	subdomain := "_acme-challenge"
 	if d != bd {
-		subdomain = strings.Trim("_acme-challenge."+d, "."+bd)
+		subdomain = strings.TrimSuffix("_acme-challenge."+d, "."+bd)
 	}
 	return subdomain
 }

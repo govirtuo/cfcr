@@ -143,10 +143,9 @@ func main() {
 				for _, v := range vals {
 					txtvalues = append(txtvalues, v.TxtValue)
 				}
-				if !true { // ! debug
-					if err := pr.UpdateTXTRecords(subl, d, txtvalues...); err != nil {
-						a.Logger.Error().Err(err).Msg("failed to update TXT records")
-					}
+
+				if err := pr.UpdateTXTRecords(subl, d, txtvalues...); err != nil {
+					a.Logger.Error().Err(err).Msg("failed to update TXT records")
 				}
 
 				if c.Metrics.Enabled {

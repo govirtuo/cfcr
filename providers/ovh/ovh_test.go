@@ -16,9 +16,9 @@ func Test_getCorrectSubdomain(t *testing.T) {
 		},
 		{
 			name: "one level",
-			d:    "www.foobar.com",
+			d:    "api.foobar.com",
 			bd:   "foobar.com",
-			want: "_acme-challenge.www",
+			want: "_acme-challenge.api",
 		},
 		{
 			name: "two levels",
@@ -30,7 +30,7 @@ func Test_getCorrectSubdomain(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := getCorrectSubdomain(tt.d, tt.bd); got != tt.want {
-				t.Errorf("getCorrectSubdomain() = %v, want %v", got, tt.want)
+				t.Errorf("got '%v', want '%v'", got, tt.want)
 			}
 		})
 	}
