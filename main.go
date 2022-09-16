@@ -24,6 +24,10 @@ var (
 )
 
 func main() {
+	var runOnce bool
+	flag.BoolVar(&runOnce, "run-once", false, "Only one loop over the domains list will be performed.")
+	flag.Parse()
+
 	a, err := app.Create()
 	if err != nil {
 		log.Fatal().Err(err).Msg("cannot create app")
@@ -44,7 +48,11 @@ func main() {
 	a.Logger.Info().Msgf("%s version %s (built: %s)", os.Args[0], Version, BuildDate)
 	a.Logger.Info().Msgf("config creation successful, found %d domains", len(c.Checks.Domains))
 	a.Logger.Debug().Msgf("%s", c.Checks.Domains)
-	a.Logger.Info().Msgf("checks frequency is set to '%s'", c.Checks.Frequency)
+	if runOnce {
+		a.Logger.Info().Msgf("%s will run once", os.Args[0])
+	} else {
+		a.Logger.Info().Msgf("checks frequency is set to '%s'", c.Checks.Frequency)
+	}
 
 	// start metrics server if asked
 	var s *metrics.Server
@@ -70,6 +78,12 @@ func main() {
 	default:
 		err := fmt.Sprintf("frequency %s is not supported", c.Checks.Frequency)
 		a.Logger.Fatal().Err(errors.New(err)).Msg("cannot create ticker")
+	}
+
+	// if we only want to run the program once, let's not wait and set a short
+	// ticket in order for the loop to be executed almost instantly
+	if runOnce {
+		ticker = *time.NewTicker(1 * time.Second)
 	}
 
 	// detect the correct provider based on the configuration
@@ -153,6 +167,10 @@ func main() {
 					s.SetDomainLastUpdatedMetric(d)
 				}
 				subl.Info().Msg("domain records update completed")
+			}
+			if runOnce {
+				a.Logger.Info().Msg("single loop executed, ending the program")
+				return
 			}
 		}
 	}

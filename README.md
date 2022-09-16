@@ -10,6 +10,8 @@ The CLI usage of `cfcr` is really simple, as everything is configured using a YA
 Usage of cfcr:
   -config string
         configuration file name (default "config.yaml")
+  -run-once bool
+        run the program once and do not loop forever
 ```
 ## Config
 
