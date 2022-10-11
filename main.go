@@ -25,7 +25,9 @@ var (
 
 func main() {
 	var runOnce bool
+	var dryRun bool
 	flag.BoolVar(&runOnce, "run-once", false, "Only one loop over the domains list will be performed.")
+	flag.BoolVar(&dryRun, "dry-run", false, "Run in dry mode: no writing action will be performed, only reading.")
 	flag.Parse()
 
 	a, err := app.Create()
@@ -158,16 +160,21 @@ func main() {
 					txtvalues = append(txtvalues, v.TxtValue)
 				}
 
-				if err := pr.UpdateTXTRecords(subl, d, txtvalues...); err != nil {
-					a.Logger.Error().Err(err).Msg("failed to update TXT records")
-				}
+				if dryRun {
+					a.Logger.Info().Msg("running in dry-mode, stopping actions now")
+				} else {
+					if err := pr.UpdateTXTRecords(subl, d, txtvalues...); err != nil {
+						a.Logger.Error().Err(err).Msg("failed to update TXT records")
+					}
 
-				if c.Metrics.Enabled {
-					subl.Debug().Msg("updating timestamp in last updated metric")
-					s.SetDomainLastUpdatedMetric(d)
+					if c.Metrics.Enabled {
+						subl.Debug().Msg("updating timestamp in last updated metric")
+						s.SetDomainLastUpdatedMetric(d)
+					}
+					subl.Info().Msg("domain records update completed")
 				}
-				subl.Info().Msg("domain records update completed")
 			}
+
 			if runOnce {
 				a.Logger.Info().Msg("single loop executed, ending the program")
 				return
