@@ -1,0 +1,15 @@
+# log_level: debug
+# checks:
+#   base_domain: bar.com
+#   # supported values: hourly, daily, weekly, monthly
+#   frequency: weekly
+#   domains:
+#     - www.bar.com
+#     - blog.bar.com
+#     - www.staging.bar.com
+#     - blog.staging.bar.com
+# metrics:
+#   enabled: true
+#   server:
+#     address: 0.0.0.0
+#     port: 2112

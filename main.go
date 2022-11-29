@@ -34,21 +34,21 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("cannot create app")
 	}
+	a.Logger.Info().Msgf("%s version %s (built: %s)", os.Args[0], Version, BuildDate)
 
-	var configFile string
-	flag.StringVar(&configFile, "config", "config.yaml", "configuration file name")
+	// parse, read and validate the various configuration files
+	var configDir string
+	flag.StringVar(&configDir, "config-dir", "conf.d", "Path to configuration directory")
 	flag.Parse()
-
-	c, err := config.ParseConfig(configFile)
+	c, err := config.GetConfigFiles(a.Logger, configDir)
 	if err != nil {
-		a.Logger.Fatal().Err(err).Msgf("cannot parse config file %s", configFile)
+		a.Logger.Fatal().Err(err).Msgf("cannot parse config file %s", configDir)
 	}
 	if err := c.Validate(); err != nil {
 		a.Logger.Fatal().Err(err).Msg("configuration is not valid")
 	}
-
-	a.Logger.Info().Msgf("%s version %s (built: %s)", os.Args[0], Version, BuildDate)
 	a.Logger.Info().Msgf("config creation successful, found %d domains", len(c.Checks.Domains))
+
 	a.Logger.Debug().Msgf("%s", c.Checks.Domains)
 	if runOnce {
 		a.Logger.Info().Msgf("%s will run once", os.Args[0])
@@ -121,13 +121,14 @@ func main() {
 		select {
 		// having this pattern allows us to not interrupt the routine execution
 		// with an interrupt signal
-		// ? is it a good idea? maybe a more granular protection could be better
+		// is it a good idea? maybe a more granular protection could be better
 		case sig := <-sigs:
 			a.Logger.Warn().Msgf("received signal %s, exiting", sig.String())
 			os.Exit(1)
 		case t := <-ticker.C:
 			a.Logger.Debug().Msgf("received ticker signal at %s", t)
 			a.Logger.Info().Msg("starting looping around listed domains")
+
 			for _, d := range c.Checks.Domains {
 				subl := a.Logger.With().Str("domain", d).Logger()
 

@@ -1,3 +1,4 @@
 .env
 out/
 config.yaml
+secrets.yaml

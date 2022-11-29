@@ -3,7 +3,9 @@ package config
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"github.com/rs/zerolog"
 	"gopkg.in/yaml.v3"
@@ -44,10 +46,42 @@ var validFrequencies = [5]string{
 	"monthly",
 }
 
-func ParseConfig(file string) (*Config, error) {
-	data, err := os.ReadFile(file)
+func GetConfigFiles(l zerolog.Logger, path string) (*Config, error) {
+	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
+	}
+	defer file.Close()
+
+	fileInfo, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
+
+	if !fileInfo.IsDir() {
+		return nil, fmt.Errorf("%s is not a directory", path)
+	}
+
+	files, err := ioutil.ReadDir(path)
+	if err != nil {
+		return nil, err
+	}
+
+	// data contains all the bytes that are read across all the configuration files
+	var data []byte
+	for _, file := range files {
+		l.Info().Msgf("configuration file found: %s", file.Name())
+		local, err := os.ReadFile(filepath.Join(path, file.Name()))
+		if err != nil {
+			return nil, err
+		}
+
+		// adding an extra line return is necessary if the file does not end by one.
+		// Otherwise, we will end with lines such as: abc: deftoto: foo instead of:
+		// abc: def
+		// toto: foo
+		local = append(local, '\n')
+		data = append(data, local...)
 	}
 
 	var c Config
