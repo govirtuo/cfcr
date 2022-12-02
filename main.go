@@ -140,6 +140,27 @@ func main() {
 				}
 				subl.Debug().Msgf("got zone ID from Cloudflare: %s", id)
 
+				subl.Info().Msg("checking current certificate packs status")
+				status, err := cloudflare.GetCertificatePacksStatus(id, ccf)
+				if err != nil {
+					subl.Error().Err(err).Msg("cannot check current certificate packs status")
+					continue
+				}
+
+				if status == cloudflare.ActiveCertificate {
+					subl.Info().Msg("certificate packs are active for this domain, trying to cleanup provider's TXT records")
+					if dryRun {
+						a.Logger.Info().Msg("running in dry-mode, stopping actions now")
+						continue
+					}
+
+					if err := pr.CleanTXTRecords(subl, d); err != nil {
+						subl.Error().Err(err).Msgf("cannot clean certificates for %s", d)
+					}
+					continue
+				}
+				subl.Info().Msg("certificate packs are pending for this domain")
+
 				subl.Info().Msg("getting new TXT records on Cloudflare API")
 				vals, err := cloudflare.GetTXTValues(id, ccf)
 				if err != nil {
@@ -148,14 +169,6 @@ func main() {
 				}
 				subl.Debug().Msgf("got TXT records from Cloudflare: %s", vals)
 
-				// Cloudflare does not return TXT records if a zone does not need
-				// a new certificate, so we can continue the loop from here if
-				// the condition is matched
-				if len(vals) == 0 {
-					subl.Info().Msg("Cloudflare did not return any TXT record to use, so this zone probably do not need a certificate renewal. Skipping the next steps...")
-					continue
-				}
-
 				var txtvalues []string
 				for _, v := range vals {
 					txtvalues = append(txtvalues, v.TxtValue)
@@ -163,17 +176,32 @@ func main() {
 
 				if dryRun {
 					a.Logger.Info().Msg("running in dry-mode, stopping actions now")
-				} else {
-					if err := pr.UpdateTXTRecords(subl, d, txtvalues...); err != nil {
-						a.Logger.Error().Err(err).Msg("failed to update TXT records")
-					}
-
-					if c.Metrics.Enabled {
-						subl.Debug().Msg("updating timestamp in last updated metric")
-						s.SetDomainLastUpdatedMetric(d)
-					}
-					subl.Info().Msg("domain records update completed")
+					continue
 				}
+
+				// before creating the TXT records, we need to ensure that they do not
+				// already exist
+				ok, err := pr.CheckIfRecordsAlreadyExist(subl, d)
+				if err != nil {
+					subl.Error().Err(err).Msg("cannot check if TXT records already exist")
+					continue
+				}
+
+				if ok {
+					subl.Info().Msg("TXT records are already set but the certificate packs is still not renewed, so no need to pursue")
+					continue
+				}
+
+				if err := pr.CreateTXTRecords(subl, d, txtvalues...); err != nil {
+					a.Logger.Error().Err(err).Msg("failed to create TXT records")
+				}
+
+				if c.Metrics.Enabled {
+					subl.Debug().Msg("updating timestamp in last updated metric")
+					s.SetDomainLastUpdatedMetric(d)
+				}
+				subl.Info().Msg("domain records update completed")
+
 			}
 
 			if runOnce {
