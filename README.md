@@ -24,6 +24,10 @@ Most of `cfcr` configuration is done using a YAML config file. A sample is provi
 * `cfcr_domains_watched_total`: the number of domains `cfcr` is watching;
 * `cfcr_last_updated_timestamp`: when was a given domain last updated by `cfcr`. There is one version of this metric for each watched domain.
 
+## Internals
+
+![Workflow](docs/certs-check-diagram.png)
+
 ## License
 
 MIT
