@@ -1,4 +1,4 @@
-# **C**loud**f**lare **C**erts **R**enewer
+# Cloudflare Certs Renewer
 
 `cfcr` is an utility that updates TXT records when needed in order for Cloudflare Advanced Edge Certificates to be renewed. When using Let's Encrypt provider, this operation must be done manually every 3 months, which end up being time-consuming.
 
@@ -30,4 +30,4 @@ Most of `cfcr` configuration is done using a YAML config file. A sample is provi
 
 ## License
 
-MIT
+[MIT](LICENSE)
