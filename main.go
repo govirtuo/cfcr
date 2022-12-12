@@ -40,33 +40,34 @@ func main() {
 	var configDir string
 	flag.StringVar(&configDir, "config-dir", "conf.d", "Path to configuration directory")
 	flag.Parse()
-	c, err := config.GetConfigFiles(a.Logger, configDir)
+
+	a.Config, err = config.GetConfigFiles(a.Logger, configDir)
 	if err != nil {
 		a.Logger.Fatal().Err(err).Msgf("cannot parse config file %s", configDir)
 	}
-	if err := c.Validate(); err != nil {
+	if err := a.Config.Validate(); err != nil {
 		a.Logger.Fatal().Err(err).Msg("configuration is not valid")
 	}
-	a.Logger.Info().Msgf("config creation successful, found %d domains", len(c.Checks.Domains))
+	a.Logger.Info().Msgf("config creation successful, found %d domains",
+		len(a.Config.Checks.Domains))
 
-	a.Logger.Debug().Msgf("%s", c.Checks.Domains)
+	a.Logger.Debug().Msgf("%s", a.Config.Checks.Domains)
 	if runOnce {
 		a.Logger.Info().Msgf("%s will run once", os.Args[0])
 	} else {
-		a.Logger.Info().Msgf("checks frequency is set to '%s'", c.Checks.Frequency)
+		a.Logger.Info().Msgf("checks frequency is set to '%s'", a.Config.Checks.Frequency)
 	}
 
 	// start metrics server if asked
-	var s *metrics.Server
-	if c.Metrics.Enabled {
-		s = metrics.Init(c.Metrics.Server.Address, c.Metrics.Server.Port)
-		a.Logger.Info().Msgf("starting metrics server on address '%s'", s.Addr)
-		go s.Start()
-		s.SetNumOfDomainsMetric(len(c.Checks.Domains))
+	if a.Config.Metrics.Enabled {
+		a.MetricsServer = metrics.Init(a.Config.Metrics.Server.Address, a.Config.Metrics.Server.Port)
+		a.Logger.Info().Msgf("starting metrics server on address '%s'", a.MetricsServer.Addr)
+		go a.MetricsServer.Start()
+		a.MetricsServer.SetNumOfDomainsMetric(len(a.Config.Checks.Domains))
 	}
 
 	var ticker time.Ticker
-	switch c.Checks.Frequency {
+	switch a.Config.Checks.Frequency {
 	case "debug":
 		ticker = *time.NewTicker(1 * time.Minute)
 	case "hourly":
@@ -78,7 +79,7 @@ func main() {
 	case "monthly":
 		ticker = *time.NewTicker(24 * 30 * time.Hour) // 30 days a month
 	default:
-		err := fmt.Sprintf("frequency %s is not supported", c.Checks.Frequency)
+		err := fmt.Sprintf("frequency %s is not supported", a.Config.Checks.Frequency)
 		a.Logger.Fatal().Err(errors.New(err)).Msg("cannot create ticker")
 	}
 
@@ -89,19 +90,18 @@ func main() {
 	}
 
 	// detect the correct provider based on the configuration
-	var pr providers.Provider
-	switch providers.ProviderToUse(*c) {
+	switch providers.ProviderToUse(*a.Config) {
 	case providers.List[providers.OVH]:
 		a.Logger.Info().Msg("the detected provider is OVH")
 		subdomain := "_acme-challenge"
 		covh := ovh.Credentials{
-			ApplicationKey:    c.Auth.OVH.AppKey,
-			ApplicationSecret: c.Auth.OVH.AppSecret,
-			ConsumerKey:       c.Auth.OVH.ConsumerKey,
+			ApplicationKey:    a.Config.Auth.OVH.AppKey,
+			ApplicationSecret: a.Config.Auth.OVH.AppSecret,
+			ConsumerKey:       a.Config.Auth.OVH.ConsumerKey,
 		}
-		pr = ovh.OVHProvider{
+		a.Provider = ovh.OVHProvider{
 			Credentials: covh,
-			BaseDomain:  c.Checks.BaseDomain,
+			BaseDomain:  a.Config.Checks.BaseDomain,
 			Subdomain:   subdomain,
 		}
 	case providers.List[providers.NONE]:
@@ -109,9 +109,9 @@ func main() {
 			Msg("no provider detected based on the configuration. Are you sure you completed all the required fields?")
 	}
 
-	ccf := cloudflare.Credentials{
-		AuthEmail: c.Auth.Cloudflare.Email,
-		AuthKey:   c.Auth.Cloudflare.Key,
+	a.CloudflareCredz = cloudflare.Credentials{
+		AuthEmail: a.Config.Auth.Cloudflare.Email,
+		AuthKey:   a.Config.Auth.Cloudflare.Key,
 	}
 
 	// wait and loop
@@ -126,86 +126,10 @@ func main() {
 			a.Logger.Warn().Msgf("received signal %s, exiting", sig.String())
 			os.Exit(1)
 		case t := <-ticker.C:
-			a.Logger.Debug().Msgf("received ticker signal at %s", t)
-			a.Logger.Info().Msg("starting looping around listed domains")
-
-			for _, d := range c.Checks.Domains {
-				subl := a.Logger.With().Str("domain", d).Logger()
-
-				subl.Info().Msg("getting zone ID on Cloudflare API")
-				id, err := cloudflare.GetZoneID(d, ccf)
-				if err != nil {
-					subl.Error().Err(err).Msg("cannot get zone ID")
-					continue
-				}
-				subl.Debug().Msgf("got zone ID from Cloudflare: %s", id)
-
-				subl.Info().Msg("checking current certificate packs status")
-				status, err := cloudflare.GetCertificatePacksStatus(id, ccf)
-				if err != nil {
-					subl.Error().Err(err).Msg("cannot check current certificate packs status")
-					continue
-				}
-
-				if status == cloudflare.ActiveCertificate {
-					subl.Info().Msg("certificate packs are active for this domain, trying to cleanup provider's TXT records")
-					if dryRun {
-						a.Logger.Info().Msg("running in dry-mode, stopping actions now")
-						continue
-					}
-
-					if err := pr.CleanTXTRecords(subl, d); err != nil {
-						subl.Error().Err(err).Msgf("cannot clean certificates for %s", d)
-					}
-					continue
-				}
-				subl.Info().Msg("certificate packs are pending for this domain")
-
-				subl.Info().Msg("getting new TXT records on Cloudflare API")
-				vals, err := cloudflare.GetTXTValues(id, ccf)
-				if err != nil {
-					subl.Error().Err(err).Msg("cannot get new TXT records")
-					continue
-				}
-				subl.Debug().Msgf("got TXT records from Cloudflare: %s", vals)
-
-				var txtvalues []string
-				for _, v := range vals {
-					txtvalues = append(txtvalues, v.TxtValue)
-				}
-
-				if dryRun {
-					a.Logger.Info().Msg("running in dry-mode, stopping actions now")
-					continue
-				}
-
-				// before creating the TXT records, we need to ensure that they do not
-				// already exist
-				ok, err := pr.CheckIfRecordsAlreadyExist(subl, d)
-				if err != nil {
-					subl.Error().Err(err).Msg("cannot check if TXT records already exist")
-					continue
-				}
-
-				if ok {
-					subl.Info().Msg("TXT records are already set but the certificate packs is still not renewed, so no need to pursue")
-					continue
-				}
-
-				if err := pr.CreateTXTRecords(subl, d, txtvalues...); err != nil {
-					a.Logger.Error().Err(err).Msg("failed to create TXT records")
-				}
-
-				if c.Metrics.Enabled {
-					subl.Debug().Msg("updating timestamp in last updated metric")
-					s.SetDomainLastUpdatedMetric(d)
-				}
-				subl.Info().Msg("domain records update completed")
-
+			if err := a.Run(t, dryRun); err != nil {
+				a.Logger.Fatal().Msgf("error running app: %s", err)
 			}
-
 			if runOnce {
-				a.Logger.Info().Msg("single loop executed, ending the program")
 				return
 			}
 		}

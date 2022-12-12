@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/rs/zerolog"
 	"gopkg.in/yaml.v3"
@@ -46,6 +47,7 @@ var validFrequencies = [5]string{
 	"monthly",
 }
 
+// GetConfigFiles parses all the YAML files present in the path
 func GetConfigFiles(l zerolog.Logger, path string) (*Config, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -70,6 +72,11 @@ func GetConfigFiles(l zerolog.Logger, path string) (*Config, error) {
 	// data contains all the bytes that are read across all the configuration files
 	var data []byte
 	for _, file := range files {
+		if !isYamlFile(file.Name()) {
+			l.Debug().Msgf("file '%s' does not seem to be a YAML file, skipping its content",
+				file.Name())
+			continue
+		}
 		l.Info().Msgf("configuration file found: %s", file.Name())
 		local, err := os.ReadFile(filepath.Join(path, file.Name()))
 		if err != nil {
@@ -92,6 +99,7 @@ func GetConfigFiles(l zerolog.Logger, path string) (*Config, error) {
 	return &c, nil
 }
 
+// Validates check that the required fields are set within c
 func (c Config) Validate() error {
 	// parse and set the log level
 	l, err := zerolog.ParseLevel(c.LogLevel)
@@ -114,11 +122,20 @@ func (c Config) Validate() error {
 	return nil
 }
 
+// isFreqValid checks that f is a supported frequency
 func isFreqValid(f string) bool {
 	for _, ff := range validFrequencies {
 		if f == ff {
 			return true
 		}
+	}
+	return false
+}
+
+// isYamlFile checks if the filename ends with either .yaml or .yml
+func isYamlFile(name string) bool {
+	if strings.HasSuffix(name, ".yaml") || strings.HasSuffix(name, ".yml") {
+		return true
 	}
 	return false
 }
