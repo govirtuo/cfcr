@@ -87,7 +87,7 @@ func (p OVHProvider) CreateTXTRecords(l zerolog.Logger, domain string, txtvalues
 	for _, v := range txtvalues {
 		params := CreatePostParams{
 			SubDomain: subdomain,
-			FieldType: "A",
+			FieldType: "TXT",
 			Target:    v,
 		}
 		uri := fmt.Sprintf("/domain/zone/%s/record", p.BaseDomain)

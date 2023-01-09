@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	PendingCertificate = "pending"
+	PendingCertificate = "pending_validation"
 	ActiveCertificate  = "active"
 )
 
@@ -142,7 +142,7 @@ func GetCertificatePacksStatus(id string, credz Credentials) (string, error) {
 	switch holder.Result[0].Status {
 	case "active":
 		return ActiveCertificate, nil
-	case "pending":
+	case "pending_validation":
 		return PendingCertificate, nil
 	default:
 		return "", fmt.Errorf("error while getting the certificate packs status: status '%s' is unknown",
