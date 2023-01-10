@@ -1,5 +1,7 @@
 # Cloudflare Certs Renewer
 
+![License Badge](https://img.shields.io/badge/license-MIT-success)
+
 `cfcr` is an utility that updates TXT records when needed in order for Cloudflare Advanced Edge Certificates to be renewed. When using Let's Encrypt provider, this operation must be done manually every 3 months, which end up being time-consuming.
 
 ## Usage
@@ -30,4 +32,4 @@ Most of `cfcr` configuration is done using a YAML config file. A sample is provi
 
 ## License
 
-[MIT](LICENSE)
+[MIT](https://choosealicense.com/licenses/mit/)
