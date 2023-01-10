@@ -15,13 +15,13 @@ RUN make build && \
     /usr/local/bin/upx -9 ./out/bin/cfcr
 
 # RUN stage
-FROM gcr.io/distroless/base-debian11
+FROM gcr.io/distroless/base-debian11:nonroot
 
 WORKDIR /app
 
 COPY --from=builder /build/out/bin/cfcr .
 
-COPY --from=builder /build/config.sample.yaml config.yaml
+COPY --from=builder /build/*.yaml ./conf.d/
 
 EXPOSE 2112
 
