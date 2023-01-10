@@ -26,8 +26,10 @@ var (
 func main() {
 	var runOnce bool
 	var dryRun bool
+	var configDir string
 	flag.BoolVar(&runOnce, "run-once", false, "Only one loop over the domains list will be performed.")
 	flag.BoolVar(&dryRun, "dry-run", false, "Run in dry mode: no writing action will be performed, only reading.")
+	flag.StringVar(&configDir, "config-dir", "conf.d", "Path to configuration directory.")
 	flag.Parse()
 
 	a, err := app.Create()
@@ -37,10 +39,6 @@ func main() {
 	a.Logger.Info().Msgf("%s version %s (built: %s)", os.Args[0], Version, BuildDate)
 
 	// parse, read and validate the various configuration files
-	var configDir string
-	flag.StringVar(&configDir, "config-dir", "conf.d", "Path to configuration directory")
-	flag.Parse()
-
 	a.Config, err = config.GetConfigFiles(a.Logger, configDir)
 	if err != nil {
 		a.Logger.Fatal().Err(err).Msgf("cannot parse config file %s", configDir)
