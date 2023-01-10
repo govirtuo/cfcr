@@ -7,6 +7,11 @@ import (
 	"net/http"
 )
 
+const (
+	PendingCertificate = "pending_validation"
+	ActiveCertificate  = "active"
+)
+
 type Credentials struct {
 	AuthEmail string
 	AuthKey   string
@@ -98,11 +103,17 @@ func GetTXTValues(id string, credz Credentials) ([]ValidationRecords, error) {
 	return holder.Result[0].ValidationRecords, nil
 }
 
-func RetriggerSSLVerification(id string, credz Credentials) error {
-	url := fmt.Sprintf("https://api.cloudflare.com/client/v4/zones/%s/ssl/verification?retry=true", id)
+func GetCertificatePacksStatus(id string, credz Credentials) (string, error) {
+	type APISchema struct {
+		Result []struct {
+			Status string `json:"status,omitempty"`
+		} `json:"result"`
+	}
+
+	url := fmt.Sprintf("https://api.cloudflare.com/client/v4/zones/%s/ssl/certificate_packs?status=all", id)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	req.Header = http.Header{
@@ -114,9 +125,27 @@ func RetriggerSSLVerification(id string, credz Credentials) error {
 	client := &http.Client{}
 	r, err := client.Do(req)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer r.Body.Close()
 
-	return nil
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return "", err
+	}
+
+	var holder APISchema
+	if err := json.Unmarshal(data, &holder); err != nil {
+		return "", err
+	}
+
+	switch holder.Result[0].Status {
+	case "active":
+		return ActiveCertificate, nil
+	case "pending_validation":
+		return PendingCertificate, nil
+	default:
+		return "", fmt.Errorf("error while getting the certificate packs status: status '%s' is unknown",
+			holder.Result[0].Status)
+	}
 }
