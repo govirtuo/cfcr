@@ -19,6 +19,21 @@ Usage of cfcr:
 
 Most of `cfcr` configuration is done using a YAML config file. A sample is provided [here](https://github.com/govirtuo/cfcr/blob/main/config.sample.yaml). For now, only one DNS provider is supported: OVH. If you need another one, feel free to contribute! The integration if new providers should be easy thanks to the `Providers` interface.
 
+## Providers
+
+### OVH
+
+To generate OVH API keys needed in your configuration, you have to:
+
+* navigate to [the Create API Keys page](https://www.ovh.com/auth/api/createToken);
+* choose an application name and descriptionn as well as a validity duration;
+* finally, select the correct permissions:
+  * `GET` `/domain/zone/*`
+  * `POST` `/domain/zone/*`
+  * `DELETE` `/domain/zone/*`
+
+![OVH API keys creation](docs/ovh-api-keys-creation.png)
+
 ## Metrics
 
 `cfcr` is shipped with an embedded Prometheus exporter that exposes basic metrics about the program behavior (stack/heap allocations...) and some others about certs renewal, especially:
