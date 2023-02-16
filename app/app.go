@@ -40,14 +40,21 @@ func (a App) Run(t time.Time, dryRun bool) error {
 		subl.Info().Msg("getting zone ID on Cloudflare API")
 		id, err := cloudflare.GetZoneID(d, a.CloudflareCredz)
 		if err != nil {
+			if err == cloudflare.ErrEmptyResponse {
+				subl.Fatal().Err(err).Msg("cloudflare returned nothing, the token is probably not working")
+			}
 			subl.Error().Err(err).Msg("cannot get zone ID")
 			continue
 		}
+
 		subl.Debug().Msgf("got zone ID from Cloudflare: %s", id)
 
 		subl.Info().Msg("checking current certificate packs status")
 		status, err := cloudflare.GetCertificatePacksStatus(id, a.CloudflareCredz)
 		if err != nil {
+			if err == cloudflare.ErrEmptyResponse {
+				subl.Fatal().Err(err).Msg("cloudflare returned nothing, the token is probably not working")
+			}
 			subl.Error().Err(err).Msg("cannot check current certificate packs status")
 			continue
 		}
@@ -69,6 +76,9 @@ func (a App) Run(t time.Time, dryRun bool) error {
 		subl.Info().Msg("getting new TXT records on Cloudflare API")
 		vals, err := cloudflare.GetTXTValues(id, a.CloudflareCredz)
 		if err != nil {
+			if err == cloudflare.ErrEmptyResponse {
+				subl.Fatal().Err(err).Msg("cloudflare returned nothing, the token is probably not working")
+			}
 			subl.Error().Err(err).Msg("cannot get new TXT records")
 			continue
 		}

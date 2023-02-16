@@ -108,8 +108,7 @@ func main() {
 	}
 
 	a.CloudflareCredz = cloudflare.Credentials{
-		AuthEmail: a.Config.Auth.Cloudflare.Email,
-		AuthKey:   a.Config.Auth.Cloudflare.Key,
+		Token: a.Config.Auth.Cloudflare.Token,
 	}
 
 	// wait and loop
