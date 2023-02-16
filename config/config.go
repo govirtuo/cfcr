@@ -16,8 +16,7 @@ type Config struct {
 	LogLevel string `yaml:"log_level"`
 	Auth     struct {
 		Cloudflare struct {
-			Email string `yaml:"email"`
-			Key   string `yaml:"key"`
+			Token string `yaml:"token"`
 		} `yaml:"cloudflare"`
 		OVH struct {
 			AppKey      string `yaml:"app_key"`
@@ -108,11 +107,8 @@ func (c Config) Validate() error {
 	}
 	zerolog.SetGlobalLevel(l)
 
-	if c.Auth.Cloudflare.Email == "" {
-		return errors.New("cloudflare configuration is incomplete: missing .auth.cloudflare.email field")
-	}
-	if c.Auth.Cloudflare.Key == "" {
-		return errors.New("cloudflare configuration is incomplete: missing .auth.cloudflare.key field")
+	if c.Auth.Cloudflare.Token == "" {
+		return errors.New("cloudflare configuration is incomplete: missing .auth.cloudflare.token field")
 	}
 
 	// parse and validate given frequency

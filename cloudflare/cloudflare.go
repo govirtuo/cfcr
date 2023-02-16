@@ -2,6 +2,7 @@ package cloudflare
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -12,9 +13,10 @@ const (
 	ActiveCertificate  = "active"
 )
 
+var ErrEmptyResponse = errors.New("cloudflare returned nothing")
+
 type Credentials struct {
-	AuthEmail string
-	AuthKey   string
+	Token string
 }
 
 type ValidationRecords struct {
@@ -38,9 +40,8 @@ func GetZoneID(name string, credz Credentials) (string, error) {
 	}
 
 	req.Header = http.Header{
-		"X-Auth-Email": {credz.AuthEmail},
-		"X-Auth-Key":   {credz.AuthKey},
-		"Content-Type": {"application/json"},
+		"Authorization": {"Bearer " + credz.Token},
+		"Content-Type":  {"application/json"},
 	}
 
 	client := &http.Client{}
@@ -58,6 +59,10 @@ func GetZoneID(name string, credz Credentials) (string, error) {
 	var holder APISchema
 	if err := json.Unmarshal(data, &holder); err != nil {
 		return "", err
+	}
+
+	if holder.Result == nil {
+		return "", ErrEmptyResponse
 	}
 
 	return holder.Result[0].ID, nil
@@ -78,9 +83,8 @@ func GetTXTValues(id string, credz Credentials) ([]ValidationRecords, error) {
 	}
 
 	req.Header = http.Header{
-		"X-Auth-Email": {credz.AuthEmail},
-		"X-Auth-Key":   {credz.AuthKey},
-		"Content-Type": {"application/json"},
+		"Authorization": {"Bearer " + credz.Token},
+		"Content-Type":  {"application/json"},
 	}
 
 	client := &http.Client{}
@@ -98,6 +102,10 @@ func GetTXTValues(id string, credz Credentials) ([]ValidationRecords, error) {
 	var holder APISchema
 	if err := json.Unmarshal(data, &holder); err != nil {
 		return []ValidationRecords{}, err
+	}
+
+	if holder.Result == nil {
+		return []ValidationRecords{}, ErrEmptyResponse
 	}
 
 	return holder.Result[0].ValidationRecords, nil
@@ -117,9 +125,8 @@ func GetCertificatePacksStatus(id string, credz Credentials) (string, error) {
 	}
 
 	req.Header = http.Header{
-		"X-Auth-Email": {credz.AuthEmail},
-		"X-Auth-Key":   {credz.AuthKey},
-		"Content-Type": {"application/json"},
+		"Authorization": {"Bearer " + credz.Token},
+		"Content-Type":  {"application/json"},
 	}
 
 	client := &http.Client{}
@@ -137,6 +144,10 @@ func GetCertificatePacksStatus(id string, credz Credentials) (string, error) {
 	var holder APISchema
 	if err := json.Unmarshal(data, &holder); err != nil {
 		return "", err
+	}
+
+	if holder.Result == nil {
+		return "", ErrEmptyResponse
 	}
 
 	switch holder.Result[0].Status {

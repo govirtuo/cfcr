@@ -19,9 +19,24 @@ Usage of cfcr:
 ```
 ## Config
 
-Most of `cfcr` configuration is done using a YAML config file. A sample is provided [here](https://github.com/govirtuo/cfcr/blob/main/config.sample.yaml). For now, only one DNS provider is supported: OVH. If you need another one, feel free to contribute! The integration if new providers should be easy thanks to the `Providers` interface.
+By default, `cfcr` merges all the YAML files located in `./conf.d/`. The directory path can be updated using the flag `--config-dir`. As demonstrated in this repo, we recommend you to split the configuration and the secrets into to separate configuration files.
+
+### Authenticate to Cloudflare
+
+
+`cfcr` uses the [authorization request header field](https://www.rfc-editor.org/rfc/rfc6750#section-2.1). In order for the program to run authenticated requests to Cloudflare's API, it needs an API token with the following permissions:
+
+*  `Zone:Read`
+*  `Zone Settings:Read`
+*  `SSL and Certificates:Read`
+
+![](docs/cloudflare-api-token-permissions.png)
+
+This token should be written in the `.auth.cloudflare.token` field in one of the YAML configuration file.
 
 ## Providers
+
+For now, only one DNS provider is supported: OVH. If you need another one, feel free to contribute! The integration if new providers should be easy thanks to the `Providers` interface.
 
 ### OVH
 
