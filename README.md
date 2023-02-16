@@ -19,7 +19,7 @@ Usage of cfcr:
 ```
 ## Config
 
-By default, `cfcr` merges all the YAML files located in `./conf.d/`. The directory path can be updated using the flag `--config-dir`. As demonstrated in this repo, we recommend you to split the configuration and the secrets into to separate configuration files.
+By default, `cfcr` merges all the YAML files located in `./conf.d/`. The directory path can be updated using the flag `--config-dir`. As demonstrated in this repo, we recommend you to split the configuration and the secrets into two separate configuration files.
 
 ### Authenticate to Cloudflare
 
