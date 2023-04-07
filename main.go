@@ -60,7 +60,11 @@ func main() {
 	if a.Config.Metrics.Enabled {
 		a.MetricsServer = metrics.Init(a.Config.Metrics.Server.Address, a.Config.Metrics.Server.Port)
 		a.Logger.Info().Msgf("starting metrics server on address '%s'", a.MetricsServer.Addr)
-		go a.MetricsServer.Start()
+		go func() {
+			if err := a.MetricsServer.Start(); err != nil {
+				a.Logger.Fatal().Err(err).Msgf("metrics server failed to start")
+			}
+		}()
 		a.MetricsServer.SetNumOfDomainsMetric(len(a.Config.Checks.Domains))
 	}
 
