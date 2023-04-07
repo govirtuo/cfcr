@@ -2,3 +2,4 @@
 out/
 config.yaml
 secrets.yaml
+.idea/
