@@ -78,9 +78,6 @@ func (a App) Run(t time.Time, dryRun bool) error {
 				continue
 			}
 
-			// todo: retrigger the validation
-			// https://developers.cloudflare.com/ssl/edge-certificates/advanced-certificate-manager/manage-certificates/#restart-validation
-			// https://developers.cloudflare.com/api/operations/certificate-packs-restart-validation-for-advanced-certificate-manager-certificate-pack
 			if err := cloudflare.TriggerCertificatesValidation(id, certPackId, a.CloudflareCredz); err != nil {
 				subl.Error().Err(err).Str("cert pack ID", certPackId).Msg("error while triggering the certificate pack validation")
 			}
@@ -120,7 +117,7 @@ func (a App) Run(t time.Time, dryRun bool) error {
 		if ok {
 			subl.Info().Msg("TXT records are already set but the certificate packs is still not renewed, so I'm triggering the renewal")
 			if err := cloudflare.TriggerCertificatesValidation(id, certPackId, a.CloudflareCredz); err != nil {
-				subl.Error().Err(err).Str("cert pack ID", certPackId).Msg("error while triggering the certificate pack validation")
+				subl.Error().Err(err).Str("cert pack ID", certPackId).Msg("error while triggering the certificate validation")
 			}
 			subl.Info().Str("cert pack ID", certPackId).Msg("retriggered the certificate pack validation")
 			continue

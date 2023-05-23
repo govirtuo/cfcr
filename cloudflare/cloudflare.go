@@ -184,11 +184,12 @@ func GetCertificatePacksStatus(id string, credz Credentials) (string, string, er
 	}
 }
 
+// https://developers.cloudflare.com/ssl/edge-certificates/advanced-certificate-manager/manage-certificates/#restart-validation
+// https://developers.cloudflare.com/api/operations/certificate-packs-restart-validation-for-advanced-certificate-manager-certificate-pack
 func TriggerCertificatesValidation(id, certPackId string, credz Credentials) error {
 	type APISchema struct {
-		Errors   []interface{} `json:"errors"`
-		Messages []interface{} `json:"messages"`
-		Result   struct {
+		Errors []interface{} `json:"errors"`
+		Result struct {
 			ID     string `json:"id"`
 			Status string `json:"status"`
 		} `json:"result"`
