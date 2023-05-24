@@ -9,7 +9,6 @@ import (
 	"github.com/govirtuo/cfcr/metrics"
 	"github.com/govirtuo/cfcr/providers"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 )
 
 // App is a wrap struct around all the main config and and values that need to
@@ -26,7 +25,7 @@ type App struct {
 // Create creates a new App with an initialized logger only
 func Create() (*App, error) {
 	var a App
-	a.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	a.Logger = zerolog.New(os.Stderr)
 	return &a, nil
 }
 

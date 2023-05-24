@@ -40,7 +40,9 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "wrong log level",
 			fields: Config{
-				LogLevel: "foo",
+				Logging: Logging{
+					Level: "foo",
+				},
 			},
 			wantErr: true,
 		},
@@ -48,10 +50,10 @@ func TestConfig_Validate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := Config{
-				LogLevel: tt.fields.LogLevel,
-				Auth:     tt.fields.Auth,
-				Checks:   tt.fields.Checks,
-				Metrics:  tt.fields.Metrics,
+				Logging: tt.fields.Logging,
+				Auth:    tt.fields.Auth,
+				Checks:  tt.fields.Checks,
+				Metrics: tt.fields.Metrics,
 			}
 			if err := c.Validate(); (err != nil) != tt.wantErr {
 				t.Errorf("Config.Validate() error = %v, wantErr %v", err, tt.wantErr)

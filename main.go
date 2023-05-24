@@ -15,6 +15,7 @@ import (
 	"github.com/govirtuo/cfcr/metrics"
 	"github.com/govirtuo/cfcr/providers"
 	"github.com/govirtuo/cfcr/providers/ovh"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
@@ -46,6 +47,10 @@ func main() {
 	if err := a.Config.Validate(); err != nil {
 		a.Logger.Fatal().Err(err).Msg("configuration is not valid")
 	}
+	if a.Config.Logging.HumanReadable {
+		a.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	}
+
 	a.Logger.Info().Msgf("config creation successful, found %d domains",
 		len(a.Config.Checks.Domains))
 

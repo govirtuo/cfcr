@@ -13,8 +13,8 @@ import (
 )
 
 type Config struct {
-	LogLevel string `yaml:"log_level"`
-	Auth     struct {
+	Logging Logging `yaml:"logging"`
+	Auth    struct {
 		Cloudflare struct {
 			Token string `yaml:"token"`
 		} `yaml:"cloudflare"`
@@ -36,6 +36,11 @@ type Config struct {
 			Port    string `yaml:"port"`
 		} `yaml:"server"`
 	} `yaml:"metrics"`
+}
+
+type Logging struct {
+	Level         string `yaml:"level"`
+	HumanReadable bool   `yaml:"human_readable"`
 }
 
 var validFrequencies = [5]string{
@@ -101,7 +106,7 @@ func GetConfigFiles(l zerolog.Logger, path string) (*Config, error) {
 // Validates check that the required fields are set within c
 func (c Config) Validate() error {
 	// parse and set the log level
-	l, err := zerolog.ParseLevel(c.LogLevel)
+	l, err := zerolog.ParseLevel(c.Logging.Level)
 	if err != nil {
 		return err
 	}
