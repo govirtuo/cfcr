@@ -13,7 +13,10 @@ const (
 	ActiveCertificate  = "active"
 )
 
-var ErrEmptyResponse = errors.New("cloudflare returned nothing")
+var (
+	ErrEmptyResponse = errors.New("cloudflare returned nothing")
+	ErrNoResult      = errors.New("cloudflare did not return any result in the response")
+)
 
 type Credentials struct {
 	Token string
@@ -65,6 +68,10 @@ func GetZoneID(name string, credz Credentials) (string, error) {
 		return "", ErrEmptyResponse
 	}
 
+	if len(holder.Result) < 1 {
+		return "", ErrNoResult
+	}
+
 	return holder.Result[0].ID, nil
 }
 
@@ -108,6 +115,10 @@ func GetTXTValues(id string, credz Credentials) ([]ValidationRecords, error) {
 		return []ValidationRecords{}, ErrEmptyResponse
 	}
 
+	if len(holder.Result) < 1 {
+		return []ValidationRecords{}, ErrNoResult
+	}
+
 	return holder.Result[0].ValidationRecords, nil
 }
 
@@ -148,6 +159,10 @@ func GetCertificatePacksStatus(id string, credz Credentials) (string, error) {
 
 	if holder.Result == nil {
 		return "", ErrEmptyResponse
+	}
+
+	if len(holder.Result) < 1 {
+		return "", ErrNoResult
 	}
 
 	switch holder.Result[0].Status {
