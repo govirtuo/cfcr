@@ -25,7 +25,7 @@ type App struct {
 // Create creates a new App with an initialized logger only
 func Create() (*App, error) {
 	var a App
-	a.Logger = zerolog.New(os.Stderr)
+	a.Logger = zerolog.New(os.Stderr).With().Caller().Logger()
 	return &a, nil
 }
 
