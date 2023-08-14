@@ -3,7 +3,6 @@ package config
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -68,7 +67,7 @@ func GetConfigFiles(l zerolog.Logger, path string) (*Config, error) {
 		return nil, fmt.Errorf("%s is not a directory", path)
 	}
 
-	files, err := ioutil.ReadDir(path)
+	files, err := os.ReadDir(path)
 	if err != nil {
 		return nil, err
 	}
