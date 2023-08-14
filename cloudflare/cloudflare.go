@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 )
 
@@ -54,7 +54,7 @@ func GetZoneID(name string, credz Credentials) (string, error) {
 	}
 	defer r.Body.Close()
 
-	data, err := ioutil.ReadAll(r.Body)
+	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		return "", err
 	}
@@ -101,7 +101,7 @@ func GetTXTValues(id string, credz Credentials) ([]ValidationRecords, error) {
 	}
 	defer r.Body.Close()
 
-	data, err := ioutil.ReadAll(r.Body)
+	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		return []ValidationRecords{}, err
 	}
@@ -147,7 +147,7 @@ func GetCertificatePacksStatus(id string, credz Credentials) (string, error) {
 	}
 	defer r.Body.Close()
 
-	data, err := ioutil.ReadAll(r.Body)
+	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		return "", err
 	}
