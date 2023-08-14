@@ -1,5 +1,5 @@
 # BUILD stage
-FROM devopsworks/golang-upx:1.18 as BUILDER
+FROM devopsworks/golang-upx:1.21 as BUILDER
 
 ENV GO111MODULE=on \
     CGO_ENABLED=0 \
