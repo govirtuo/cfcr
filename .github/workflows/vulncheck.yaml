@@ -1,3 +1,4 @@
+name: Govulncheck
 on:
   push:
     branches:
