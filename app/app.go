@@ -48,18 +48,18 @@ func (a App) Run(t time.Time, dryRun bool) error {
 
 		subl.Debug().Msgf("got zone ID from Cloudflare: %s", id)
 
-		subl.Info().Msg("checking current certificate packs status")
-		status, err := cloudflare.GetCertificatePacksStatus(id, a.CloudflareCredz)
+		subl.Info().Msg("checking current certificate pack status")
+		status, certPackId, err := cloudflare.GetCertificatePacksStatus(id, a.CloudflareCredz)
 		if err != nil {
 			if err == cloudflare.ErrEmptyResponse {
 				subl.Fatal().Err(err).Msg("cloudflare returned nothing, the token is probably not working")
 			}
-			subl.Error().Err(err).Msg("cannot check current certificate packs status")
+			subl.Error().Err(err).Str("cert pack ID", certPackId).Msg("cannot check current certificate pack status")
 			continue
 		}
 
 		if status == cloudflare.ActiveCertificate {
-			subl.Info().Msg("certificate packs are active for this domain, trying to cleanup provider's TXT records")
+			subl.Info().Str("cert pack ID", certPackId).Msg("certificate pack is active for this domain, trying to cleanup provider's TXT records")
 			if dryRun {
 				a.Logger.Info().Msg("running in dry-mode, stopping actions now")
 				continue
@@ -70,8 +70,21 @@ func (a App) Run(t time.Time, dryRun bool) error {
 			}
 			continue
 		}
-		subl.Info().Msg("certificate packs are pending for this domain")
 
+		if status == cloudflare.ValidationTimedOut {
+			subl.Warn().Str("cert pack ID", certPackId).Msg("certificate pack is in a 'validation_timed_out' state for this domain, meaning that the certs have not been validated in the allowed time period. Trying to retrigger the validation")
+			if dryRun {
+				a.Logger.Info().Msg("running in dry-mode, stopping actions now")
+				continue
+			}
+
+			if err := cloudflare.TriggerCertificatesValidation(id, certPackId, a.CloudflareCredz); err != nil {
+				subl.Error().Err(err).Str("cert pack ID", certPackId).Msg("error while triggering the certificate pack validation")
+			}
+			subl.Info().Str("cert pack ID", certPackId).Msg("retriggered the certificate pack validation")
+		}
+
+		subl.Info().Str("cert pack ID", certPackId).Msg("certificate pack is pending for this domain")
 		subl.Info().Msg("getting new TXT records on Cloudflare API")
 		vals, err := cloudflare.GetTXTValues(id, a.CloudflareCredz)
 		if err != nil {
@@ -102,7 +115,11 @@ func (a App) Run(t time.Time, dryRun bool) error {
 		}
 
 		if ok {
-			subl.Info().Msg("TXT records are already set but the certificate packs is still not renewed, so no need to pursue")
+			subl.Info().Msg("TXT records are already set but the certificate packs is still not renewed, so I'm triggering the renewal")
+			if err := cloudflare.TriggerCertificatesValidation(id, certPackId, a.CloudflareCredz); err != nil {
+				subl.Error().Err(err).Str("cert pack ID", certPackId).Msg("error while triggering the certificate validation")
+			}
+			subl.Info().Str("cert pack ID", certPackId).Msg("retriggered the certificate pack validation")
 			continue
 		}
 
