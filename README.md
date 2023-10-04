@@ -4,6 +4,20 @@
 
 `cfcr` is an utility that updates TXT records when needed in order for Cloudflare Advanced Edge Certificates to be renewed. When using Let's Encrypt provider, this operation must be done manually every 3 months, which end up being time-consuming.
 
+
+## Warning: Project Archived
+
+**Note:** This project is no longer actively maintained.
+
+This project has been archived and is no longer actively maintained due to Cloudflare's DCV (Domain Control Validation) mechanism release for DNS-01 challenged certificates.
+
+References:
+* https://blog.cloudflare.com/introducing-dcv-delegation/
+* https://developers.cloudflare.com/ssl/edge-certificates/changing-dcv-method/methods/delegated-dcv/
+
+We encourage you to use this Cloudflare-managed system instead.
+
+
 ## Usage
 
 The CLI usage of `cfcr` is really simple, as everything is configured using a YAML file ([see](#config)):
